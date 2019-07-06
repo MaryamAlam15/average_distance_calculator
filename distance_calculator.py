@@ -7,8 +7,13 @@ from pyspark.sql.window import Window
 
 
 def create_spark_session():
+    """
+    creates spark session.
+    :return: spark session instance.
+    """
     spark = SparkSession \
         .builder \
+        .config('spark.sql.crossJoin.enabled', True) \
         .getOrCreate()
     return spark
 
@@ -75,6 +80,11 @@ def calculate_average_distance(vehicles_evts_df, op_prd_evts_df):
 
 
 def load_data(df, output_path):
+    """
+    :param df:
+    :param output_path:
+    :return:
+    """
     # average distance per vehicle in an operating period.
     distance_per_vehicle_in_op_prd = df.select('*') \
         .groupBy('op_prd_id', 'vehicle_id') \
@@ -85,9 +95,6 @@ def load_data(df, output_path):
     distance_per_op_prd = df.select('*') \
         .groupBy('op_prd_id') \
         .agg(F.avg('distance').alias('average_distance (kms)'))
-
-    distance_per_vehicle_in_op_prd.show(truncate=False)
-    distance_per_op_prd.show(truncate=False)
 
     distance_per_vehicle_in_op_prd.coalesce(1).write.format("json").partitionBy(['op_prd_id', 'vehicle_id']) \
         .mode("overwrite") \
@@ -101,12 +108,13 @@ def load_data(df, output_path):
 @F.udf(FloatType())
 def calculate_distance(long_x, lat_x, long_y, lat_y):
     """
+    calculate distance between 2 points.
     Haversine formula: https://en.wikipedia.org/wiki/Haversine_formula
-    :param long_x:
-    :param lat_x:
-    :param long_y:
-    :param lat_y:
-    :return:
+    :param long_x: long of P1.
+    :param lat_x: lat of P1.
+    :param long_y: long of P2.
+    :param lat_y: lat of P2.
+    :return: calculated distance in Kms.
     """
     if not (long_x and lat_x and long_y and lat_y):
         return 0
@@ -126,9 +134,9 @@ def main():
 
     spark = create_spark_session()
 
-    # vehicles_evts_df, op_prd_evts_df = extract_data(spark, input_data_path)
-    # df = calculate_average_distance(vehicles_evts_df, op_prd_evts_df)
-    # load_data(df, output_data_path)
+    vehicles_evts_df, op_prd_evts_df = extract_data(spark, input_data_path)
+    df = calculate_average_distance(vehicles_evts_df, op_prd_evts_df)
+    load_data(df, output_data_path)
 
 
 if __name__ == "__main__":
