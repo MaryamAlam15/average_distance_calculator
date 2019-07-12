@@ -1,4 +1,4 @@
-# Heyjobs jobs scraper
+# Average Distance Calculator
 
 This is a small app calculate the average distance covered by a vehicle in an operating period.
 
